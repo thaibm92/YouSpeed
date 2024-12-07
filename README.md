@@ -1,8 +1,6 @@
-# YouQuality
+# YouSpeed
 
-View and change video quality in YouTube app from the video overlay.
-
-Use with YTClassicVideoQuality to get the video quality list instantly.
+View and change video speed in YouTube app from the video overlay.
 
 ## Prerequisites
 
