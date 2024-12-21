@@ -74,7 +74,7 @@ NSBundle *YouSpeedBundle() {
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:YouSpeedUpdateNotification object:nil];
     %orig;
 }
 
@@ -113,7 +113,7 @@ NSBundle *YouSpeedBundle() {
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:YouSpeedUpdateNotification object:nil];
     %orig;
 }
 
