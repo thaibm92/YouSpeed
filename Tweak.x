@@ -5,13 +5,11 @@
 #define TweakKey @"YouSpeed"
 
 @interface YTMainAppControlsOverlayView (YouSpeed)
-@property (retain, nonatomic) YTQTMButton *speedButton;
 - (void)didPressYouSpeed:(id)arg;
 - (void)updateYouSpeedButton:(id)arg;
 @end
 
 @interface YTInlinePlayerBarContainerView (YouSpeed)
-@property (retain, nonatomic) YTQTMButton *speedButton;
 - (void)didPressYouSpeed:(id)arg;
 - (void)updateYouSpeedButton:(id)arg;
 @end
@@ -55,11 +53,8 @@ NSBundle *YouSpeedBundle() {
 
 %hook YTMainAppControlsOverlayView
 
-%property (retain, nonatomic) YTQTMButton *speedButton;
-
 - (id)initWithDelegate:(id)delegate {
     self = %orig;
-    self.speedButton = [self createTextButton:TweakKey accessibilityLabel:@"Speed" selector:@selector(didPressYouSpeed:)];
     [self updateYouSpeedButton:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateYouSpeedButton:) name:YouSpeedUpdateNotification object:nil];
     return self;
@@ -67,7 +62,6 @@ NSBundle *YouSpeedBundle() {
 
 - (id)initWithDelegate:(id)delegate autoplaySwitchEnabled:(BOOL)autoplaySwitchEnabled {
     self = %orig;
-    self.speedButton = [self createTextButton:TweakKey accessibilityLabel:@"Speed" selector:@selector(didPressYouSpeed:)];
     [self updateYouSpeedButton:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateYouSpeedButton:) name:YouSpeedUpdateNotification object:nil];
     return self;
@@ -78,13 +72,9 @@ NSBundle *YouSpeedBundle() {
     %orig;
 }
 
-- (YTQTMButton *)button:(NSString *)tweakId {
-    return [tweakId isEqualToString:TweakKey] ? self.speedButton : %orig;
-}
-
 %new(v@:@)
 - (void)updateYouSpeedButton:(id)arg {
-    [self.speedButton setTitle:currentSpeedLabel forState:0];
+    [self.overlayButtons[TweakKey] setTitle:currentSpeedLabel forState:0];
 }
 
 %new(v@:@)
@@ -102,11 +92,8 @@ NSBundle *YouSpeedBundle() {
 
 %hook YTInlinePlayerBarContainerView
 
-%property (retain, nonatomic) YTQTMButton *speedButton;
-
 - (id)init {
     self = %orig;
-    self.speedButton = [self createTextButton:TweakKey accessibilityLabel:@"Speed" selector:@selector(didPressYouSpeed:)];
     [self updateYouSpeedButton:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateYouSpeedButton:) name:YouSpeedUpdateNotification object:nil];
     return self;
@@ -117,13 +104,9 @@ NSBundle *YouSpeedBundle() {
     %orig;
 }
 
-- (YTQTMButton *)button:(NSString *)tweakId {
-    return [tweakId isEqualToString:TweakKey] ? self.speedButton : %orig;
-}
-
 %new(v@:@)
 - (void)updateYouSpeedButton:(id)arg {
-    [self.speedButton setTitle:currentSpeedLabel forState:0];
+    [self.overlayButtons[TweakKey] setTitle:currentSpeedLabel forState:0];
 }
 
 %new(v@:@)
@@ -138,7 +121,11 @@ NSBundle *YouSpeedBundle() {
 %end
 
 %ctor {
-    initYTVideoOverlay(TweakKey);
+    initYTVideoOverlay(TweakKey, @{
+        AccessibilityLabelKey: @"Speed",
+        SelectorKey: @"didPressYouSpeed:",
+        AsTextKey: @YES
+    });
     %init(Video);
     %init(Top);
     %init(Bottom);
