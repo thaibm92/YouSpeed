@@ -1,6 +1,7 @@
 #import "../YTVideoOverlay/Header.h"
 #import "../YTVideoOverlay/Init.x"
 #import <YouTubeHeader/MLHAMPlayerItemSegment.h>
+// #import <YouTubeHeader/MLAVPlayer.h>
 #import <YouTubeHeader/MLHAMQueuePlayer.h>
 #import <YouTubeHeader/YTMainAppVideoPlayerOverlayViewController.h>
 #import <YouTubeHeader/YTVarispeedSwitchController.h>
@@ -26,11 +27,7 @@ static BOOL MoreSpeed() {
     return [[NSUserDefaults standardUserDefaults] boolForKey:MoreSpeedKey];
 }
 
-%group Video
-
-%hook YTPlayerOverlayManager
-
-- (void)varispeedSwitchController:(id)arg1 didSelectRate:(float)rate {
+static void didSelectRate(float rate) {
     NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
     formatter.numberStyle = NSNumberFormatterDecimalStyle;
     formatter.minimumFractionDigits = 0;
@@ -38,6 +35,23 @@ static BOOL MoreSpeed() {
     NSString *rateString = [formatter stringFromNumber:[NSNumber numberWithFloat:rate]];
     currentSpeedLabel = [NSString stringWithFormat:@"%@x", rateString];
     [[NSNotificationCenter defaultCenter] postNotificationName:YouSpeedUpdateNotification object:nil];
+}
+
+%group Video
+
+%hook YTPlayerOverlayManager
+
+- (void)varispeedSwitchController:(id)arg1 didSelectRate:(float)rate {
+    didSelectRate(rate);
+    %orig;
+}
+
+%end
+
+%hook YTPlayerViewController
+
+- (void)varispeedSwitchController:(id)arg1 didSelectRate:(float)rate {
+    didSelectRate(rate);
     %orig;
 }
 
@@ -150,6 +164,24 @@ static BOOL MoreSpeed() {
 }
 
 %end
+
+// %hook MLAVPlayer
+
+// - (void)setRate:(float)newRate {
+//     MLInnerTubePlayerConfig *config = [self valueForKey:@"_config"];
+//     if (![config varispeedAllowed]) return;
+//     float rate = [[self valueForKey:@"_rate"] floatValue];
+//     if (rate == newRate) return;
+//     [self setValue:@(newRate) forKey:@"_rate"];
+//     self.assetPlayer.rate = newRate;
+//     MLPlayerStickySettings *stickySettings = [self valueForKey:@"_stickySettings"];
+//     stickySettings.rate = newRate;
+//     MLPlayerEventCenter *eventCenter = [self valueForKey:@"_playerEventCenter"];
+//     [eventCenter broadcastRateChange:newRate];
+//     [self.delegate playerRateDidChange:newRate];
+// }
+
+// %end
 
 %end
 
