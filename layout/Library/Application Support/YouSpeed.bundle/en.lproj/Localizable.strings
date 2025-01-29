@@ -2,3 +2,6 @@
 
 "ENABLED" = "Show speed button";
 "POSITION" = "Speed button position";
+
+"YSMS_KEY" = "More speeds";
+"YSMS_KEY_DESC" = "Add more video playback rates to the list. App restart is required.";

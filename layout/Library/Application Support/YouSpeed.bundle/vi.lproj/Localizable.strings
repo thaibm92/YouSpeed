@@ -2,3 +2,6 @@
 
 "ENABLED" = "Hiển thị nút tốc độ";
 "POSITION" = "Vị trí nút tốc độ";
+
+"YSMS_KEY" = "Thêm tốc độ";
+"YSMS_KEY_DESC" = "Thêm nhiều tốc độ phát video vào danh sách. Cần khởi động lại ứng dụng.";
