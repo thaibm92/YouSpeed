@@ -1,14 +1,20 @@
 #import "../YTVideoOverlay/Header.h"
 #import "../YTVideoOverlay/Init.x"
-#import <YouTubeHeader/MLHAMPlayerItemSegment.h>
+#import <YouTubeHeader/ASNodeController.h>
+#import <YouTubeHeader/ELMTouchCommandPropertiesHandler.h>
 // #import <YouTubeHeader/MLAVPlayer.h>
+#import <YouTubeHeader/MLHAMPlayerItemSegment.h>
 #import <YouTubeHeader/MLHAMQueuePlayer.h>
+#import <YouTubeHeader/YTActionSheetAction.h>
+#import <YouTubeHeader/YTIMenuItemSupportedRenderers.h>
 #import <YouTubeHeader/YTMainAppVideoPlayerOverlayViewController.h>
 #import <YouTubeHeader/YTVarispeedSwitchController.h>
 #import <YouTubeHeader/YTVarispeedSwitchControllerOption.h>
+#import <YouTubeHeader/YTWatchViewController.h>
 
 #define TweakKey @"YouSpeed"
 #define MoreSpeedKey @"YSMS"
+#define FixNativeSpeedKey @"YSFNS"
 
 @interface YTMainAppControlsOverlayView (YouSpeed)
 - (void)didPressYouSpeed:(id)arg;
@@ -25,6 +31,10 @@ NSString *currentSpeedLabel = @"1x";
 
 static BOOL MoreSpeed() {
     return [[NSUserDefaults standardUserDefaults] boolForKey:MoreSpeedKey];
+}
+
+static BOOL FixNativeSpeed() {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:FixNativeSpeedKey];
 }
 
 static void didSelectRate(float rate) {
@@ -130,6 +140,78 @@ static void didSelectRate(float rate) {
 
 %end
 
+%group OverrideNative
+
+static BOOL isQualitySelectionNode(ASDisplayNode *node) {
+    NSArray *yogaChildren = node.yogaChildren;
+    if (yogaChildren.count == 2 && [[yogaChildren lastObject] isKindOfClass:%c(ASTextNode)]) {
+        ASDisplayNode *parent = node.yogaParent, *previousParent;
+        do {
+            previousParent = parent;
+            parent = parent.yogaParent;
+        } while (parent && parent.yogaChildren.count != 5);
+        return parent && parent.yogaChildren.count == 5 && parent.yogaChildren[2] == previousParent;
+    }
+    return NO;
+}
+
+%hook ELMTouchCommandPropertiesHandler
+
+- (void)handleTap {
+    ASDisplayNode *node = [(ASNodeController *)[self valueForKey:@"_controller"] node];
+    if (isQualitySelectionNode(node)) {
+        UIViewController *vc = [node closestViewController];
+        if ([vc isKindOfClass:(%c(YTAppCollectionViewController))]) {
+            do {
+                vc = vc.parentViewController;
+            } while (vc && ![vc isKindOfClass:%c(YTModuleEngagementPanelViewController)]);
+            if ([vc isKindOfClass:%c(YTModuleEngagementPanelViewController)]) {
+                do {
+                    vc = vc.parentViewController;
+                } while (vc && ![vc isKindOfClass:%c(YTWatchViewController)]);
+                if ([vc isKindOfClass:%c(YTWatchViewController)]) {
+                    YTPlayerViewController *pvc = ((YTWatchViewController *)vc).playerViewController;
+                    id c = [pvc activeVideoPlayerOverlay];
+                    if ([c isKindOfClass:%c(YTMainAppVideoPlayerOverlayViewController)]) {
+                        [c dismissViewControllerAnimated:YES completion:^{
+                            [c didPressVarispeed:nil];
+                        }];
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    %orig;
+}
+
+%end
+
+%hook YTMenuController
+
+- (NSMutableArray <YTActionSheetAction *> *)actionsForRenderers:(NSMutableArray <YTIMenuItemSupportedRenderers *> *)renderers fromView:(UIView *)view entry:(id)entry shouldLogItems:(BOOL)shouldLogItems firstResponder:(id)firstResponder {
+    NSUInteger index = [renderers indexOfObjectPassingTest:^BOOL(YTIMenuItemSupportedRenderers *renderer, NSUInteger idx, BOOL *stop) {
+        YTIMenuItemSupportedRenderersElementRendererCompatibilityOptionsExtension *extension = (YTIMenuItemSupportedRenderersElementRendererCompatibilityOptionsExtension *)[renderer.elementRenderer.compatibilityOptions messageForFieldNumber:396644439];
+        BOOL isVideoSpeed = [extension.menuItemIdentifier isEqualToString:@"menu_item_playback_speed"];
+        if (isVideoSpeed) *stop = YES;
+        return isVideoSpeed;
+    }];
+    NSMutableArray <YTActionSheetAction *> *actions = %orig;
+    if (index != NSNotFound) {
+        YTActionSheetAction *action = actions[index];
+        action.handler = ^{
+            [firstResponder didPressVarispeed:nil];
+        };
+        UIView *elementView = [action.button valueForKey:@"_elementView"];
+        elementView.userInteractionEnabled = NO;
+    }
+    return actions;
+}
+
+%end
+
+%end
+
 %group Speed
 
 %hook YTVarispeedSwitchController
@@ -190,12 +272,15 @@ static void didSelectRate(float rate) {
         AccessibilityLabelKey: @"Speed",
         SelectorKey: @"didPressYouSpeed:",
         AsTextKey: @YES,
-        ExtraBooleanKeys: @[MoreSpeedKey]
+        ExtraBooleanKeys: @[MoreSpeedKey, FixNativeSpeedKey]
     });
     %init(Video);
     %init(Top);
     %init(Bottom);
     if (MoreSpeed()) {
         %init(Speed);
+    }
+    if (FixNativeSpeed()) {
+        %init(OverrideNative);
     }
 }
