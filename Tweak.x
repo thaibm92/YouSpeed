@@ -1,5 +1,5 @@
-#import "../YTVideoOverlay/Header.h"
-#import "../YTVideoOverlay/Init.x"
+#import <YTVideoOverlay/Header.h>
+#import <YTVideoOverlay/Init.x>
 #import <YouTubeHeader/ASNodeController.h>
 #import <YouTubeHeader/ELMTouchCommandPropertiesHandler.h>
 // #import <YouTubeHeader/MLAVPlayer.h>
