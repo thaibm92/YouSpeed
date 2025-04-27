@@ -1,6 +1,8 @@
 # YouSpeed
 
-View and change video speed in YouTube app from the video overlay. Also add more video speeds to choose from.
+- Views and changes video speed in YouTube app from the video overlay
+- Adds more video speeds to choose from
+- Changes the default video speed selector to a slider
 
 ## Prerequisites
 
