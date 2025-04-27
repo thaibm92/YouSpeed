@@ -34,6 +34,7 @@
 
 NSString *YouSpeedUpdateNotification = @"YouSpeedUpdateNotification";
 NSString *currentSpeedLabel = @"1x";
+float currentPlaybackRate = 1.0;
 
 static NSBundle *YouSpeedBundle() {
     static NSBundle *bundle = nil;
@@ -67,6 +68,7 @@ static NSString *speedLabel(float rate) {
 }
 
 static void didSelectRate(float rate) {
+    currentPlaybackRate = rate;
     currentSpeedLabel = speedLabel(rate);
     [[NSNotificationCenter defaultCenter] postNotificationName:YouSpeedUpdateNotification object:nil];
 }
@@ -299,9 +301,6 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
         %orig;
         return;
     }
-    CGFloat currentPlaybackRate = [self respondsToSelector:@selector(currentPlaybackRate)]
-        ? [self currentPlaybackRate]
-        : [(id <YTVarispeedSwitchControllerDelegate>)self.delegate currentPlaybackRateForVarispeedSwitchController:nil];
     NSBundle *tweakBundle = YouSpeedBundle();
     NSString *label = LOC(@"PLAYBACK_SPEED");
     NSString *chooseFromOriginalLabel = LOC(@"CHOOSE_FROM_ORIGINAL");
@@ -329,7 +328,7 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     maxLabel.font = [UIFont systemFontOfSize:12];
 
     UILabel *currentValueLabel = [[UILabel alloc] initWithFrame:CGRectMake(125, 40, 50, 20)];
-    currentValueLabel.text = speedLabel(currentPlaybackRate);
+    currentValueLabel.text = currentSpeedLabel;
     currentValueLabel.textAlignment = NSTextAlignmentCenter;
     currentValueLabel.font = [UIFont systemFontOfSize:12];
     currentValueLabel.tag = 'cvl0';
@@ -360,12 +359,8 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
 - (void)didChangePlaybackSpeed:(MDCSlider *)s {
     float rate = s.value;
     UILabel *currentValueLabel = [s.superview viewWithTag:'cvl0'];
-    currentValueLabel.text = speedLabel(rate);
-    if ([self respondsToSelector:@selector(setPlaybackRate:)])
-        [self setPlaybackRate:rate];
-    else
-        [(id <YTVarispeedSwitchControllerDelegate>)self.delegate varispeedSwitchController:nil didSelectRate:rate];
-    didSelectRate(rate);
+    [(id <YTVarispeedSwitchControllerDelegate>)self.delegate varispeedSwitchController:nil didSelectRate:rate];
+    currentValueLabel.text = currentSpeedLabel;
 }
 
 %end
