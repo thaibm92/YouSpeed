@@ -5,15 +5,21 @@
 // #import <YouTubeHeader/MLAVPlayer.h>
 #import <YouTubeHeader/MLHAMPlayerItemSegment.h>
 #import <YouTubeHeader/MLHAMQueuePlayer.h>
+#import <YouTubeHeader/UIView+YouTube.h>
+#import <YouTubeHeader/MDCSlider.h>
 #import <YouTubeHeader/YTActionSheetAction.h>
+#import <YouTubeHeader/YTAlertView.h>
+#import <YouTubeHeader/YTColor.h>
+#import <YouTubeHeader/YTColorPalette.h>
+#import <YouTubeHeader/YTCommonColorPalette.h>
+#import <YouTubeHeader/YTCommonUtils.h>
+#import <YouTubeHeader/YTLabel.h>
+#import <YouTubeHeader/YTQTMButton.h>
 #import <YouTubeHeader/YTIMenuItemSupportedRenderers.h>
 #import <YouTubeHeader/YTMainAppVideoPlayerOverlayViewController.h>
 #import <YouTubeHeader/YTVarispeedSwitchController.h>
 #import <YouTubeHeader/YTVarispeedSwitchControllerOption.h>
 #import <YouTubeHeader/YTWatchViewController.h>
-#import <YouTubeHeader/MDCSlider.h>
-#import <YouTubeHeader/YTAlertView.h>
-#import <YouTubeHeader/YTColor.h>
 
 #define TweakKey @"YouSpeed"
 #define MoreSpeedKey @"YSMS"
@@ -25,6 +31,10 @@
 @interface YTMainAppControlsOverlayView (YouSpeed)
 - (void)didPressYouSpeed:(id)arg;
 - (void)updateYouSpeedButton:(id)arg;
+@end
+
+@interface YTMainAppVideoPlayerOverlayViewController (YouSpeed)
+- (void)didChangePlaybackSpeed:(MDCSlider *)s;
 @end
 
 @interface YTInlinePlayerBarContainerView (YouSpeed)
@@ -294,6 +304,123 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
 
 %group Slider
 
+@interface YouSpeedSliderAlertView : YTAlertView
+- (void)setupViews:(YTMainAppVideoPlayerOverlayViewController *)delegate sliderLabel:(NSString *)sliderLabel;
+@end
+
+%subclass YouSpeedSliderAlertView : YTAlertView
+
+%new(v@:@@)
+- (void)setupViews:(YTMainAppVideoPlayerOverlayViewController *)delegate sliderLabel:(NSString *)sliderLabel {
+    MDCSlider *slider = [%c(MDCSlider) new];
+    slider.statefulAPIEnabled = YES;
+    slider.minimumValue = MIN_SPEED;
+    slider.maximumValue = MAX_SPEED;
+    slider.value = currentPlaybackRate;
+    slider.continuous = NO;
+    slider.accessibilityLabel = sliderLabel;
+    slider.tag = 'slid';
+    [slider setTrackBackgroundColor:[%c(YTColor) grey3Alpha70] forState:UIControlStateNormal];
+
+    YTLabel *minLabel = [%c(YTLabel) new];
+    minLabel.text = speedLabel(MIN_SPEED);
+    minLabel.textAlignment = NSTextAlignmentLeft;
+    minLabel.tag = 'minl';
+    minLabel.frame = CGRectMake(0, 0, 50, 20);
+    [minLabel setTypeKind:22];
+
+    YTLabel *maxLabel = [%c(YTLabel) new];
+    maxLabel.text = speedLabel(MAX_SPEED);
+    maxLabel.textAlignment = NSTextAlignmentRight;
+    maxLabel.tag = 'maxl';
+    maxLabel.frame = CGRectMake(0, 0, 50, 20);
+    [maxLabel setTypeKind:22];
+
+    YTLabel *currentValueLabel = [%c(YTLabel) new];
+    currentValueLabel.text = currentSpeedLabel;
+    currentValueLabel.textAlignment = NSTextAlignmentCenter;
+    currentValueLabel.tag = 'cvl0';
+    currentValueLabel.frame = CGRectMake(0, 0, 50, 20);
+    [currentValueLabel setTypeKind:22];
+
+    YTQTMButton *minusButton = [%c(YTQTMButton) textButton];
+    minusButton.frame = CGRectMake(0, 0, 30, 30);
+    minusButton.enabledBackgroundColor = [UIColor colorWithWhite:1.0 alpha:0.2];
+    minusButton.flatButtonHasOpaqueBackground = YES;
+    minusButton.tag = 'mbtn';
+    [minusButton setTitleTypeKind:2];
+    [minusButton setTitle:@"-" forState:UIControlStateNormal];
+    [minusButton addTarget:delegate action:@selector(didPressMinusButton:) forControlEvents:UIControlEventTouchUpInside];
+
+    YTQTMButton *plusButton = [%c(YTQTMButton) textButton];
+    plusButton.frame = CGRectMake(0, 0, 30, 30);
+    plusButton.enabledBackgroundColor = [UIColor colorWithWhite:1.0 alpha:0.2];
+    plusButton.flatButtonHasOpaqueBackground = YES;
+    plusButton.tag = 'pbtn';
+    [plusButton setTitleTypeKind:2];
+    [plusButton setTitle:@"+" forState:UIControlStateNormal];
+    [plusButton addTarget:delegate action:@selector(didPressPlusButton:) forControlEvents:UIControlEventTouchUpInside];
+
+    CGFloat contentWidth = [%c(YTCommonUtils) isIPad] ? 350 : 250;
+    UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, contentWidth, 60)]; // Content view width
+    [contentView addSubview:slider];
+    [contentView addSubview:minLabel];
+    [contentView addSubview:maxLabel];
+    [contentView addSubview:currentValueLabel];
+    [contentView addSubview:minusButton];
+    [contentView addSubview:plusButton];
+
+    CGFloat sliderWidth = contentWidth - 80; // Slider width
+    slider.frame = CGRectMake(0, 0, sliderWidth, 30); // Slider width
+    slider.delegate = (id <MDCSliderDelegate>)contentView;
+    [slider addTarget:delegate action:@selector(didChangePlaybackSpeed:) forControlEvents:UIControlEventValueChanged];
+
+    self.customContentView = contentView;
+}
+
+- (void)layoutSubviews {
+    %orig;
+    YTLabel *minLabel = [self.customContentView viewWithTag:'minl'];
+    YTLabel *maxLabel = [self.customContentView viewWithTag:'maxl'];
+    YTLabel *currentValueLabel = [self.customContentView viewWithTag:'cvl0'];
+    YTQTMButton *minusButton = [self.customContentView viewWithTag:'mbtn'];
+    YTQTMButton *plusButton = [self.customContentView viewWithTag:'pbtn'];
+    MDCSlider *slider = [self.customContentView viewWithTag:'slid'];
+    [slider alignCenterTopToCenterTopOfView:self.customContentView paddingY:0];
+    [minLabel alignTopLeadingToBottomLeadingOfView:slider paddingX:0 paddingY:10];
+    [maxLabel alignTopTrailingToBottomTrailingOfView:slider paddingX:0 paddingY:10];
+    [currentValueLabel alignCenterTopToCenterBottomOfView:slider paddingY:10];
+    [minusButton alignCenterTrailingToCenterLeadingOfView:slider paddingX:10];
+    [plusButton alignCenterLeadingToCenterTrailingOfView:slider paddingX:10];
+}
+
+- (void)pageStyleDidChange:(NSInteger)pageStyle {
+    %orig;
+    YTCommonColorPalette *colorPalette;
+    Class YTCommonColorPaletteClass = %c(YTCommonColorPalette);
+    if (YTCommonColorPaletteClass)
+        colorPalette = pageStyle == 1 ? [YTCommonColorPaletteClass darkPalette] : [YTCommonColorPaletteClass lightPalette];
+    else
+        colorPalette = [%c(YTColorPalette) colorPaletteForPageStyle:pageStyle];
+    MDCSlider *slider = [self.customContentView viewWithTag:'slid'];
+    YTLabel *minLabel = [self.customContentView viewWithTag:'minl'];
+    YTLabel *maxLabel = [self.customContentView viewWithTag:'maxl'];
+    YTLabel *currentValueLabel = [self.customContentView viewWithTag:'cvl0'];
+    YTQTMButton *minusButton = [self.customContentView viewWithTag:'mbtn'];
+    YTQTMButton *plusButton = [self.customContentView viewWithTag:'pbtn'];
+
+    UIColor *textColor = [colorPalette textPrimary];
+    minLabel.textColor = textColor;
+    maxLabel.textColor = textColor;
+    currentValueLabel.textColor = textColor;
+    [slider setThumbColor:textColor forState:UIControlStateNormal];
+    [slider setTrackFillColor:textColor forState:UIControlStateNormal];
+    minusButton.customTitleColor = textColor;
+    plusButton.customTitleColor = textColor;
+}
+
+%end
+
 %hook YTMainAppVideoPlayerOverlayViewController
 
 - (void)didPressVarispeed:(id)arg1 {
@@ -304,49 +431,11 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     NSBundle *tweakBundle = YouSpeedBundle();
     NSString *label = LOC(@"PLAYBACK_SPEED");
     NSString *chooseFromOriginalLabel = LOC(@"CHOOSE_FROM_ORIGINAL");
-    CGRect rect = CGRectMake(0, 0, 300, 30);
-    UIColor *color = [%c(YTColor) youTubeRed];
-    MDCSlider *slider = [%c(MDCSlider) new];
-    slider.statefulAPIEnabled = YES;
-    slider.minimumValue = MIN_SPEED;
-    slider.maximumValue = MAX_SPEED;
-    slider.value = currentPlaybackRate;
-    slider.continuous = NO;
-    slider.accessibilityLabel = label;
-    [slider setThumbColor:color forState:UIControlStateNormal];
-    [slider setTrackFillColor:color forState:UIControlStateNormal];
-    [slider setTrackBackgroundColor:[%c(YTColor) grey3Alpha70] forState:UIControlStateNormal];
-
-    UILabel *minLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 40, 50, 20)];
-    minLabel.text = speedLabel(MIN_SPEED);
-    minLabel.textAlignment = NSTextAlignmentLeft;
-    minLabel.font = [UIFont systemFontOfSize:12];
-
-    UILabel *maxLabel = [[UILabel alloc] initWithFrame:CGRectMake(250, 40, 50, 20)];
-    maxLabel.text = speedLabel(MAX_SPEED);
-    maxLabel.textAlignment = NSTextAlignmentRight;
-    maxLabel.font = [UIFont systemFontOfSize:12];
-
-    UILabel *currentValueLabel = [[UILabel alloc] initWithFrame:CGRectMake(125, 40, 50, 20)];
-    currentValueLabel.text = currentSpeedLabel;
-    currentValueLabel.textAlignment = NSTextAlignmentCenter;
-    currentValueLabel.font = [UIFont systemFontOfSize:12];
-    currentValueLabel.tag = 'cvl0';
-
-    UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 300, 60)];
-    [contentView addSubview:slider];
-    [contentView addSubview:minLabel];
-    [contentView addSubview:maxLabel];
-    [contentView addSubview:currentValueLabel];
-
-    slider.frame = rect;
-    slider.delegate = (id <MDCSliderDelegate>)contentView;
-    [slider addTarget:self action:@selector(didChangePlaybackSpeed:) forControlEvents:UIControlEventValueChanged];
-
-    YTAlertView *alert = [%c(YTAlertView) infoDialog];
-    alert.customContentView = contentView;
+    YouSpeedSliderAlertView *alert = [%c(YouSpeedSliderAlertView) infoDialog];
+    [alert setupViews:self sliderLabel:label];
     alert.title = label;
     alert.shouldDismissOnBackgroundTap = YES;
+    alert.customContentViewInsets = UIEdgeInsetsMake(8, 0, 0, 0);
     [alert addTitle:chooseFromOriginalLabel withCancelAction:^{
         dispatch_async(dispatch_get_main_queue(), ^{
             %orig;
@@ -361,6 +450,22 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     UILabel *currentValueLabel = [s.superview viewWithTag:'cvl0'];
     [(id <YTVarispeedSwitchControllerDelegate>)self.delegate varispeedSwitchController:nil didSelectRate:rate];
     currentValueLabel.text = currentSpeedLabel;
+}
+
+%new(v@:@)
+- (void)didPressMinusButton:(UIButton *)button {
+    MDCSlider *slider = [button.superview viewWithTag:'slid'];
+    float newValue = MAX(slider.minimumValue, slider.value - 0.05);
+    slider.value = newValue;
+    [self didChangePlaybackSpeed:slider];
+}
+
+%new(v@:@)
+- (void)didPressPlusButton:(UIButton *)button {
+    MDCSlider *slider = [button.superview viewWithTag:'slid'];
+    float newValue = MIN(slider.maximumValue, slider.value + 0.05);
+    slider.value = newValue;
+    [self didChangePlaybackSpeed:slider];
 }
 
 %end
