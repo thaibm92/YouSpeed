@@ -1,7 +1,5 @@
 #import "../YTVideoOverlay/Header.h"
 #import "../YTVideoOverlay/Init.x"
-#import <YouTubeHeader/ASNodeController.h>
-#import <YouTubeHeader/ELMTouchCommandPropertiesHandler.h>
 #import <YouTubeHeader/MDCSlider.h>
 // #import <YouTubeHeader/MLAVPlayer.h>
 #import <YouTubeHeader/MLHAMPlayerItemSegment.h>
@@ -20,7 +18,6 @@
 #import <YouTubeHeader/YTMainAppVideoPlayerOverlayViewController.h>
 #import <YouTubeHeader/YTVarispeedSwitchController.h>
 #import <YouTubeHeader/YTVarispeedSwitchControllerOption.h>
-#import <YouTubeHeader/YTWatchViewController.h>
 
 #define TweakKey @"YouSpeed"
 #define MoreSpeedKey @"YSMS"
@@ -179,51 +176,6 @@ static void didSelectRate(float rate) {
 
 %group OverrideNative
 
-static BOOL isQualitySelectionNode(ASDisplayNode *node) {
-    NSArray *yogaChildren = node.yogaChildren;
-    if (yogaChildren.count == 2 && [[yogaChildren lastObject] isKindOfClass:%c(ASTextNode)]) {
-        ASDisplayNode *parent = node.yogaParent, *previousParent;
-        do {
-            previousParent = parent;
-            parent = parent.yogaParent;
-        } while (parent && parent.yogaChildren.count != 5);
-        return parent && parent.yogaChildren.count == 5 && parent.yogaChildren[2] == previousParent;
-    }
-    return NO;
-}
-
-%hook ELMTouchCommandPropertiesHandler
-
-- (void)handleTap {
-    ASDisplayNode *node = [(ASNodeController *)[self valueForKey:@"_controller"] node];
-    if (isQualitySelectionNode(node)) {
-        UIViewController *vc = [node closestViewController];
-        if ([vc isKindOfClass:(%c(YTAppCollectionViewController))]) {
-            do {
-                vc = vc.parentViewController;
-            } while (vc && ![vc isKindOfClass:%c(YTModuleEngagementPanelViewController)]);
-            if ([vc isKindOfClass:%c(YTModuleEngagementPanelViewController)]) {
-                do {
-                    vc = vc.parentViewController;
-                } while (vc && ![vc isKindOfClass:%c(YTWatchViewController)]);
-                if ([vc isKindOfClass:%c(YTWatchViewController)]) {
-                    YTPlayerViewController *pvc = ((YTWatchViewController *)vc).playerViewController;
-                    id c = [pvc activeVideoPlayerOverlay];
-                    if ([c isKindOfClass:%c(YTMainAppVideoPlayerOverlayViewController)]) {
-                        [c dismissViewControllerAnimated:YES completion:^{
-                            [c didPressVarispeed:nil];
-                        }];
-                        return;
-                    }
-                }
-            }
-        }
-    }
-    %orig;
-}
-
-%end
-
 %hook YTMenuController
 
 - (NSMutableArray <YTActionSheetAction *> *)actionsForRenderers:(NSMutableArray <YTIMenuItemSupportedRenderers *> *)renderers fromView:(UIView *)fromView entry:(id)entry shouldLogItems:(BOOL)shouldLogItems firstResponder:(id)firstResponder {
@@ -313,6 +265,10 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
 
 %new(v@:@@)
 - (void)setupViews:(YTMainAppVideoPlayerOverlayViewController *)delegate sliderLabel:(NSString *)sliderLabel {
+    CGSize labelSize = CGSizeMake(50, 20);
+    CGSize adjustButtonSize = CGSizeMake(30, 30);
+    CGSize presetButtonSize = CGSizeMake(50, 30);  
+
     MDCSlider *slider = [%c(MDCSlider) new];
     slider.statefulAPIEnabled = YES;
     slider.minimumValue = MIN_SPEED;
@@ -327,52 +283,102 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     minLabel.text = speedLabel(MIN_SPEED);
     minLabel.textAlignment = NSTextAlignmentLeft;
     minLabel.tag = 'minl';
-    minLabel.frame = CGRectMake(0, 0, 50, 20);
+    [minLabel yt_setSize:labelSize];
     [minLabel setTypeKind:22];
 
     YTLabel *maxLabel = [%c(YTLabel) new];
     maxLabel.text = speedLabel(MAX_SPEED);
     maxLabel.textAlignment = NSTextAlignmentRight;
     maxLabel.tag = 'maxl';
-    maxLabel.frame = CGRectMake(0, 0, 50, 20);
+    [maxLabel yt_setSize:labelSize];
     [maxLabel setTypeKind:22];
 
     YTLabel *currentValueLabel = [%c(YTLabel) new];
     currentValueLabel.text = currentSpeedLabel;
     currentValueLabel.textAlignment = NSTextAlignmentCenter;
     currentValueLabel.tag = 'cvl0';
-    currentValueLabel.frame = CGRectMake(0, 0, 50, 20);
+    [currentValueLabel yt_setSize:labelSize];
     [currentValueLabel setTypeKind:22];
-
-    CGSize buttonSize = CGSizeMake(30, 30);
 
     UIImage *minusImage = [%c(QTMIcon) imageWithName:@"ic_remove" color:nil];
     YTQTMButton *minusButton = [%c(YTQTMButton) buttonWithImage:minusImage accessibilityLabel:@"Decrease playback speed" accessibilityIdentifier:@"playback.speed.minus"];
-    minusButton.sizeWithPaddingAndInsets = YES;
-    [minusButton yt_setSize:buttonSize];
     minusButton.flatButtonHasOpaqueBackground = YES;
+    minusButton.sizeWithPaddingAndInsets = YES;
     minusButton.tag = 'mbtn';
+    [minusButton yt_setSize:adjustButtonSize];
     [minusButton addTarget:delegate action:@selector(didPressMinusButton:) forControlEvents:UIControlEventTouchUpInside];
 
     UIImage *plusImage = [%c(QTMIcon) imageWithName:@"ic_add" color:nil];
     YTQTMButton *plusButton = [%c(YTQTMButton) buttonWithImage:plusImage accessibilityLabel:@"Increase playback speed" accessibilityIdentifier:@"playback.speed.plus"];
-    plusButton.sizeWithPaddingAndInsets = YES;
-    [plusButton yt_setSize:buttonSize];
     plusButton.flatButtonHasOpaqueBackground = YES;
+    plusButton.sizeWithPaddingAndInsets = YES;
     plusButton.tag = 'pbtn';
+    [plusButton yt_setSize:adjustButtonSize];
     [plusButton addTarget:delegate action:@selector(didPressPlusButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    YTQTMButton *speed025Button = [%c(YTQTMButton) textButton];
+    speed025Button.flatButtonHasOpaqueBackground = YES;
+    speed025Button.sizeWithPaddingAndInsets = YES;
+    speed025Button.tag = 's025';
+    [speed025Button yt_setSize:presetButtonSize];
+    [speed025Button setTitleTypeKind:21];
+    [speed025Button setTitle:@"0.25x" forState:UIControlStateNormal];
+    [speed025Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    YTQTMButton *speed050Button = [%c(YTQTMButton) textButton];
+    speed050Button.flatButtonHasOpaqueBackground = YES;
+    speed050Button.sizeWithPaddingAndInsets = YES;
+    speed050Button.tag = 's050';
+    [speed050Button yt_setSize:presetButtonSize];
+    [speed050Button setTitleTypeKind:21];
+    [speed050Button setTitle:@"0.5x" forState:UIControlStateNormal];
+    [speed050Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    YTQTMButton *speed100Button = [%c(YTQTMButton) textButton];
+    speed100Button.flatButtonHasOpaqueBackground = YES;
+    speed100Button.sizeWithPaddingAndInsets = YES;
+    speed100Button.tag = 's100';
+    [speed100Button yt_setSize:presetButtonSize];
+    [speed100Button setTitleTypeKind:21];
+    [speed100Button setTitle:@"1x" forState:UIControlStateNormal];
+    [speed100Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    YTQTMButton *speed150Button = [%c(YTQTMButton) textButton];
+    speed150Button.flatButtonHasOpaqueBackground = YES;
+    speed150Button.sizeWithPaddingAndInsets = YES;
+    speed150Button.tag = 's150';
+    [speed150Button yt_setSize:presetButtonSize];
+    [speed150Button setTitleTypeKind:21];
+    [speed150Button setTitle:@"1.5x" forState:UIControlStateNormal];
+    [speed150Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
+    
+    YTQTMButton *speed200Button = [%c(YTQTMButton) textButton];
+    speed200Button.flatButtonHasOpaqueBackground = YES;
+    speed200Button.sizeWithPaddingAndInsets = YES;
+    speed200Button.tag = 's200';
+    [speed200Button yt_setSize:presetButtonSize];
+    [speed200Button setTitleTypeKind:21];
+    [speed200Button setTitle:@"2x" forState:UIControlStateNormal];
+    [speed200Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
 
     CGFloat contentWidth = [%c(YTCommonUtils) isIPad] ? 350 : 250;
-    UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, contentWidth, 60)]; // Content view width
+    UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, contentWidth, 120)];
     [contentView addSubview:slider];
     [contentView addSubview:minLabel];
     [contentView addSubview:maxLabel];
     [contentView addSubview:currentValueLabel];
     [contentView addSubview:minusButton];
     [contentView addSubview:plusButton];
+    
+    // Add preset buttons to the content view
+    [contentView addSubview:speed025Button];
+    [contentView addSubview:speed050Button];
+    [contentView addSubview:speed100Button];
+    [contentView addSubview:speed150Button];
+    [contentView addSubview:speed200Button];
 
-    CGFloat sliderWidth = contentWidth - 80; // Slider width
-    slider.frame = CGRectMake(0, 0, sliderWidth, buttonSize.height); // Slider width
+    CGFloat sliderWidth = contentWidth - 80;
+    slider.frame = CGRectMake(0, 0, sliderWidth, adjustButtonSize.height);
     slider.delegate = (id <MDCSliderDelegate>)contentView;
     [slider addTarget:delegate action:@selector(didChangePlaybackSpeed:) forControlEvents:UIControlEventValueChanged];
 
@@ -381,18 +387,34 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
 
 - (void)layoutSubviews {
     %orig;
-    YTLabel *minLabel = [self.customContentView viewWithTag:'minl'];
-    YTLabel *maxLabel = [self.customContentView viewWithTag:'maxl'];
-    YTLabel *currentValueLabel = [self.customContentView viewWithTag:'cvl0'];
-    YTQTMButton *minusButton = [self.customContentView viewWithTag:'mbtn'];
-    YTQTMButton *plusButton = [self.customContentView viewWithTag:'pbtn'];
-    MDCSlider *slider = [self.customContentView viewWithTag:'slid'];
-    [slider alignCenterTopToCenterTopOfView:self.customContentView paddingY:0];
+    UIView *contentView = self.customContentView;
+    YTLabel *minLabel = [contentView viewWithTag:'minl'];
+    YTLabel *maxLabel = [contentView viewWithTag:'maxl'];
+    YTLabel *currentValueLabel = [contentView viewWithTag:'cvl0'];
+    YTQTMButton *minusButton = [contentView viewWithTag:'mbtn'];
+    YTQTMButton *plusButton = [contentView viewWithTag:'pbtn'];
+    MDCSlider *slider = [contentView viewWithTag:'slid'];
+    YTQTMButton *speed025Button = [contentView viewWithTag:'s025'];
+    YTQTMButton *speed050Button = [contentView viewWithTag:'s050'];
+    YTQTMButton *speed100Button = [contentView viewWithTag:'s100'];
+    YTQTMButton *speed150Button = [contentView viewWithTag:'s150'];
+    YTQTMButton *speed200Button = [contentView viewWithTag:'s200'];
+
+    [slider alignCenterTopToCenterTopOfView:contentView paddingY:0];
     [minLabel alignTopLeadingToBottomLeadingOfView:slider paddingX:0 paddingY:10];
     [maxLabel alignTopTrailingToBottomTrailingOfView:slider paddingX:0 paddingY:10];
     [currentValueLabel alignCenterTopToCenterBottomOfView:slider paddingY:10];
     [minusButton alignCenterTrailingToCenterLeadingOfView:slider paddingX:10];
     [plusButton alignCenterLeadingToCenterTrailingOfView:slider paddingX:10];
+
+    CGFloat padding = (contentView.frame.size.width - (50 * 5)) / 4;
+    CGFloat buttonY = currentValueLabel.frame.origin.y + currentValueLabel.frame.size.height + 15;
+    
+    [speed025Button yt_setOrigin:CGPointMake(0, buttonY)];
+    [speed050Button yt_setOrigin:CGPointMake(padding + 50, buttonY)];
+    [speed100Button yt_setOrigin:CGPointMake(padding * 2 + 50 * 2, buttonY)];
+    [speed150Button yt_setOrigin:CGPointMake(padding * 3 + 50 * 3, buttonY)];
+    [speed200Button yt_setOrigin:CGPointMake(padding * 4 + 50 * 4, buttonY)];
 }
 
 - (void)pageStyleDidChange:(NSInteger)pageStyle {
@@ -409,15 +431,31 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     YTLabel *currentValueLabel = [self.customContentView viewWithTag:'cvl0'];
     YTQTMButton *minusButton = [self.customContentView viewWithTag:'mbtn'];
     YTQTMButton *plusButton = [self.customContentView viewWithTag:'pbtn'];
+    YTQTMButton *speed025Button = [self.customContentView viewWithTag:'s025'];
+    YTQTMButton *speed050Button = [self.customContentView viewWithTag:'s050'];
+    YTQTMButton *speed100Button = [self.customContentView viewWithTag:'s100'];
+    YTQTMButton *speed150Button = [self.customContentView viewWithTag:'s150'];
+    YTQTMButton *speed200Button = [self.customContentView viewWithTag:'s200'];
 
     UIColor *textColor = [colorPalette textPrimary];
+    UIColor *adjustButtonBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
     minLabel.textColor = textColor;
     maxLabel.textColor = textColor;
     currentValueLabel.textColor = textColor;
     minusButton.tintColor = textColor;
-    minusButton.enabledBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
+    minusButton.enabledBackgroundColor = adjustButtonBackgroundColor;
     plusButton.tintColor = textColor;
-    plusButton.enabledBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
+    plusButton.enabledBackgroundColor = adjustButtonBackgroundColor;
+    speed025Button.customTitleColor
+        = speed050Button.customTitleColor
+        = speed100Button.customTitleColor
+        = speed150Button.customTitleColor
+        = speed200Button.customTitleColor = textColor;
+    speed025Button.enabledBackgroundColor
+        = speed050Button.enabledBackgroundColor
+        = speed100Button.enabledBackgroundColor
+        = speed150Button.enabledBackgroundColor
+        = speed200Button.enabledBackgroundColor = adjustButtonBackgroundColor;
     [slider setThumbColor:textColor forState:UIControlStateNormal];
     [slider setTrackFillColor:textColor forState:UIControlStateNormal];
 }
@@ -467,6 +505,34 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
 - (void)didPressPlusButton:(UIButton *)button {
     MDCSlider *slider = [button.superview viewWithTag:'slid'];
     float newValue = MIN(slider.maximumValue, slider.value + 0.05);
+    slider.value = newValue;
+    [self didChangePlaybackSpeed:slider];
+}
+
+%new(v@:@)
+- (void)didPressSpeedPresetButton:(YTQTMButton *)button {
+    MDCSlider *slider = [button.superview viewWithTag:'slid'];
+    if (!slider) return;
+    
+    float newValue = 1.0;
+    switch (button.tag) {
+        case 's025':
+            newValue = 0.25;
+            break;
+        case 's050':
+            newValue = 0.5;
+            break;
+        case 's100':
+            newValue = 1.0;
+            break;
+        case 's150':
+            newValue = 1.5;
+            break;
+        case 's200':
+            newValue = 2.0;
+            break;
+    }
+    
     slider.value = newValue;
     [self didChangePlaybackSpeed:slider];
 }
