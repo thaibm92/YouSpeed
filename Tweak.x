@@ -2,11 +2,12 @@
 #import "../YTVideoOverlay/Init.x"
 #import <YouTubeHeader/ASNodeController.h>
 #import <YouTubeHeader/ELMTouchCommandPropertiesHandler.h>
+#import <YouTubeHeader/MDCSlider.h>
 // #import <YouTubeHeader/MLAVPlayer.h>
 #import <YouTubeHeader/MLHAMPlayerItemSegment.h>
 #import <YouTubeHeader/MLHAMQueuePlayer.h>
+#import <YouTubeHeader/QTMIcon.h>
 #import <YouTubeHeader/UIView+YouTube.h>
-#import <YouTubeHeader/MDCSlider.h>
 #import <YouTubeHeader/YTActionSheetAction.h>
 #import <YouTubeHeader/YTAlertView.h>
 #import <YouTubeHeader/YTColor.h>
@@ -343,22 +344,22 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     currentValueLabel.frame = CGRectMake(0, 0, 50, 20);
     [currentValueLabel setTypeKind:22];
 
-    YTQTMButton *minusButton = [%c(YTQTMButton) textButton];
-    minusButton.frame = CGRectMake(0, 0, 30, 30);
-    minusButton.enabledBackgroundColor = [UIColor colorWithWhite:1.0 alpha:0.2];
+    CGSize buttonSize = CGSizeMake(30, 30);
+
+    UIImage *minusImage = [%c(QTMIcon) imageWithName:@"ic_remove" color:nil];
+    YTQTMButton *minusButton = [%c(YTQTMButton) buttonWithImage:minusImage accessibilityLabel:@"Decrease playback speed" accessibilityIdentifier:@"playback.speed.minus"];
+    minusButton.sizeWithPaddingAndInsets = YES;
+    [minusButton yt_setSize:buttonSize];
     minusButton.flatButtonHasOpaqueBackground = YES;
     minusButton.tag = 'mbtn';
-    [minusButton setTitleTypeKind:2];
-    [minusButton setTitle:@"-" forState:UIControlStateNormal];
     [minusButton addTarget:delegate action:@selector(didPressMinusButton:) forControlEvents:UIControlEventTouchUpInside];
 
-    YTQTMButton *plusButton = [%c(YTQTMButton) textButton];
-    plusButton.frame = CGRectMake(0, 0, 30, 30);
-    plusButton.enabledBackgroundColor = [UIColor colorWithWhite:1.0 alpha:0.2];
+    UIImage *plusImage = [%c(QTMIcon) imageWithName:@"ic_add" color:nil];
+    YTQTMButton *plusButton = [%c(YTQTMButton) buttonWithImage:plusImage accessibilityLabel:@"Increase playback speed" accessibilityIdentifier:@"playback.speed.plus"];
+    plusButton.sizeWithPaddingAndInsets = YES;
+    [plusButton yt_setSize:buttonSize];
     plusButton.flatButtonHasOpaqueBackground = YES;
     plusButton.tag = 'pbtn';
-    [plusButton setTitleTypeKind:2];
-    [plusButton setTitle:@"+" forState:UIControlStateNormal];
     [plusButton addTarget:delegate action:@selector(didPressPlusButton:) forControlEvents:UIControlEventTouchUpInside];
 
     CGFloat contentWidth = [%c(YTCommonUtils) isIPad] ? 350 : 250;
@@ -371,7 +372,7 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     [contentView addSubview:plusButton];
 
     CGFloat sliderWidth = contentWidth - 80; // Slider width
-    slider.frame = CGRectMake(0, 0, sliderWidth, 30); // Slider width
+    slider.frame = CGRectMake(0, 0, sliderWidth, buttonSize.height); // Slider width
     slider.delegate = (id <MDCSliderDelegate>)contentView;
     [slider addTarget:delegate action:@selector(didChangePlaybackSpeed:) forControlEvents:UIControlEventValueChanged];
 
@@ -413,10 +414,12 @@ static BOOL isQualitySelectionNode(ASDisplayNode *node) {
     minLabel.textColor = textColor;
     maxLabel.textColor = textColor;
     currentValueLabel.textColor = textColor;
+    minusButton.tintColor = textColor;
+    minusButton.enabledBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
+    plusButton.tintColor = textColor;
+    plusButton.enabledBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
     [slider setThumbColor:textColor forState:UIControlStateNormal];
     [slider setTrackFillColor:textColor forState:UIControlStateNormal];
-    minusButton.customTitleColor = textColor;
-    plusButton.customTitleColor = textColor;
 }
 
 %end
