@@ -267,10 +267,11 @@ static void didSelectRate(float rate) {
 - (void)setupViews:(YTMainAppVideoPlayerOverlayViewController *)delegate sliderLabel:(NSString *)sliderLabel {
     CGSize labelSize = CGSizeMake(50, 20);
     CGSize adjustButtonSize = CGSizeMake(30, 30);
-    CGSize presetButtonSize = CGSizeMake(50, 30);  
+    CGSize presetButtonSize = CGSizeMake(50, 30);
 
     MDCSlider *slider = [%c(MDCSlider) new];
     slider.statefulAPIEnabled = YES;
+    slider.thumbHollowAtStart = NO;
     slider.minimumValue = MIN_SPEED;
     slider.maximumValue = MAX_SPEED;
     slider.value = currentPlaybackRate;
@@ -315,7 +316,7 @@ static void didSelectRate(float rate) {
     plusButton.tag = 'pbtn';
     [plusButton yt_setSize:adjustButtonSize];
     [plusButton addTarget:delegate action:@selector(didPressPlusButton:) forControlEvents:UIControlEventTouchUpInside];
-    
+
     YTQTMButton *speed025Button = [%c(YTQTMButton) textButton];
     speed025Button.flatButtonHasOpaqueBackground = YES;
     speed025Button.sizeWithPaddingAndInsets = YES;
@@ -324,7 +325,7 @@ static void didSelectRate(float rate) {
     [speed025Button setTitleTypeKind:21];
     [speed025Button setTitle:@"0.25x" forState:UIControlStateNormal];
     [speed025Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
-    
+
     YTQTMButton *speed050Button = [%c(YTQTMButton) textButton];
     speed050Button.flatButtonHasOpaqueBackground = YES;
     speed050Button.sizeWithPaddingAndInsets = YES;
@@ -333,7 +334,7 @@ static void didSelectRate(float rate) {
     [speed050Button setTitleTypeKind:21];
     [speed050Button setTitle:@"0.5x" forState:UIControlStateNormal];
     [speed050Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
-    
+
     YTQTMButton *speed100Button = [%c(YTQTMButton) textButton];
     speed100Button.flatButtonHasOpaqueBackground = YES;
     speed100Button.sizeWithPaddingAndInsets = YES;
@@ -342,7 +343,7 @@ static void didSelectRate(float rate) {
     [speed100Button setTitleTypeKind:21];
     [speed100Button setTitle:@"1x" forState:UIControlStateNormal];
     [speed100Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
-    
+
     YTQTMButton *speed150Button = [%c(YTQTMButton) textButton];
     speed150Button.flatButtonHasOpaqueBackground = YES;
     speed150Button.sizeWithPaddingAndInsets = YES;
@@ -351,7 +352,7 @@ static void didSelectRate(float rate) {
     [speed150Button setTitleTypeKind:21];
     [speed150Button setTitle:@"1.5x" forState:UIControlStateNormal];
     [speed150Button addTarget:delegate action:@selector(didPressSpeedPresetButton:) forControlEvents:UIControlEventTouchUpInside];
-    
+
     YTQTMButton *speed200Button = [%c(YTQTMButton) textButton];
     speed200Button.flatButtonHasOpaqueBackground = YES;
     speed200Button.sizeWithPaddingAndInsets = YES;
@@ -369,8 +370,6 @@ static void didSelectRate(float rate) {
     [contentView addSubview:currentValueLabel];
     [contentView addSubview:minusButton];
     [contentView addSubview:plusButton];
-    
-    // Add preset buttons to the content view
     [contentView addSubview:speed025Button];
     [contentView addSubview:speed050Button];
     [contentView addSubview:speed100Button];
@@ -399,6 +398,7 @@ static void didSelectRate(float rate) {
     YTQTMButton *speed100Button = [contentView viewWithTag:'s100'];
     YTQTMButton *speed150Button = [contentView viewWithTag:'s150'];
     YTQTMButton *speed200Button = [contentView viewWithTag:'s200'];
+    NSArray <YTQTMButton *> *presetButtons = @[speed025Button, speed050Button, speed100Button, speed150Button, speed200Button];
 
     [slider alignCenterTopToCenterTopOfView:contentView paddingY:0];
     [minLabel alignTopLeadingToBottomLeadingOfView:slider paddingX:0 paddingY:10];
@@ -409,12 +409,13 @@ static void didSelectRate(float rate) {
 
     CGFloat padding = (contentView.frame.size.width - (50 * 5)) / 4;
     CGFloat buttonY = currentValueLabel.frame.origin.y + currentValueLabel.frame.size.height + 15;
-    
-    [speed025Button yt_setOrigin:CGPointMake(0, buttonY)];
-    [speed050Button yt_setOrigin:CGPointMake(padding + 50, buttonY)];
-    [speed100Button yt_setOrigin:CGPointMake(padding * 2 + 50 * 2, buttonY)];
-    [speed150Button yt_setOrigin:CGPointMake(padding * 3 + 50 * 3, buttonY)];
-    [speed200Button yt_setOrigin:CGPointMake(padding * 4 + 50 * 4, buttonY)];
+
+    if ([UIApplication sharedApplication].userInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft)
+        presetButtons = [[presetButtons reverseObjectEnumerator] allObjects];
+    for (int i = 0; i < presetButtons.count; ++i) {
+        YTQTMButton *button = presetButtons[i];
+        [button yt_setOrigin:CGPointMake(i * (padding + 50), buttonY)];
+    }
 }
 
 - (void)pageStyleDidChange:(NSInteger)pageStyle {
@@ -425,17 +426,18 @@ static void didSelectRate(float rate) {
         colorPalette = pageStyle == 1 ? [YTCommonColorPaletteClass darkPalette] : [YTCommonColorPaletteClass lightPalette];
     else
         colorPalette = [%c(YTColorPalette) colorPaletteForPageStyle:pageStyle];
-    MDCSlider *slider = [self.customContentView viewWithTag:'slid'];
-    YTLabel *minLabel = [self.customContentView viewWithTag:'minl'];
-    YTLabel *maxLabel = [self.customContentView viewWithTag:'maxl'];
-    YTLabel *currentValueLabel = [self.customContentView viewWithTag:'cvl0'];
-    YTQTMButton *minusButton = [self.customContentView viewWithTag:'mbtn'];
-    YTQTMButton *plusButton = [self.customContentView viewWithTag:'pbtn'];
-    YTQTMButton *speed025Button = [self.customContentView viewWithTag:'s025'];
-    YTQTMButton *speed050Button = [self.customContentView viewWithTag:'s050'];
-    YTQTMButton *speed100Button = [self.customContentView viewWithTag:'s100'];
-    YTQTMButton *speed150Button = [self.customContentView viewWithTag:'s150'];
-    YTQTMButton *speed200Button = [self.customContentView viewWithTag:'s200'];
+    UIView *contentView = self.customContentView;
+    MDCSlider *slider = [contentView viewWithTag:'slid'];
+    YTLabel *minLabel = [contentView viewWithTag:'minl'];
+    YTLabel *maxLabel = [contentView viewWithTag:'maxl'];
+    YTLabel *currentValueLabel = [contentView viewWithTag:'cvl0'];
+    YTQTMButton *minusButton = [contentView viewWithTag:'mbtn'];
+    YTQTMButton *plusButton = [contentView viewWithTag:'pbtn'];
+    YTQTMButton *speed025Button = [contentView viewWithTag:'s025'];
+    YTQTMButton *speed050Button = [contentView viewWithTag:'s050'];
+    YTQTMButton *speed100Button = [contentView viewWithTag:'s100'];
+    YTQTMButton *speed150Button = [contentView viewWithTag:'s150'];
+    YTQTMButton *speed200Button = [contentView viewWithTag:'s200'];
 
     UIColor *textColor = [colorPalette textPrimary];
     UIColor *adjustButtonBackgroundColor = [UIColor colorWithWhite:pageStyle alpha:0.2];
@@ -462,6 +464,8 @@ static void didSelectRate(float rate) {
 
 %end
 
+YouSpeedSliderAlertView *alert;
+
 %hook YTMainAppVideoPlayerOverlayViewController
 
 - (void)didPressVarispeed:(id)arg1 {
@@ -472,7 +476,7 @@ static void didSelectRate(float rate) {
     NSBundle *tweakBundle = YouSpeedBundle();
     NSString *label = LOC(@"PLAYBACK_SPEED");
     NSString *chooseFromOriginalLabel = LOC(@"CHOOSE_FROM_ORIGINAL");
-    YouSpeedSliderAlertView *alert = [%c(YouSpeedSliderAlertView) infoDialog];
+    alert = [%c(YouSpeedSliderAlertView) infoDialog];
     [alert setupViews:self sliderLabel:label];
     alert.title = label;
     alert.shouldDismissOnBackgroundTap = YES;
@@ -494,26 +498,24 @@ static void didSelectRate(float rate) {
 }
 
 %new(v@:@)
-- (void)didPressMinusButton:(UIButton *)button {
+- (void)didPressMinusButton:(YTQTMButton *)button {
     MDCSlider *slider = [button.superview viewWithTag:'slid'];
     float newValue = MAX(slider.minimumValue, slider.value - 0.05);
-    slider.value = newValue;
+    [slider setValue:newValue animated:YES];
     [self didChangePlaybackSpeed:slider];
 }
 
 %new(v@:@)
-- (void)didPressPlusButton:(UIButton *)button {
+- (void)didPressPlusButton:(YTQTMButton *)button {
     MDCSlider *slider = [button.superview viewWithTag:'slid'];
     float newValue = MIN(slider.maximumValue, slider.value + 0.05);
-    slider.value = newValue;
+    [slider setValue:newValue animated:YES];
     [self didChangePlaybackSpeed:slider];
 }
 
 %new(v@:@)
 - (void)didPressSpeedPresetButton:(YTQTMButton *)button {
     MDCSlider *slider = [button.superview viewWithTag:'slid'];
-    if (!slider) return;
-    
     float newValue = 1.0;
     switch (button.tag) {
         case 's025':
@@ -532,9 +534,11 @@ static void didSelectRate(float rate) {
             newValue = 2.0;
             break;
     }
-    
+
     slider.value = newValue;
     [self didChangePlaybackSpeed:slider];
+    [alert dismiss];
+    alert = nil;
 }
 
 %end
