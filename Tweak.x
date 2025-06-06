@@ -302,16 +302,21 @@ static void didSelectRate(float rate) {
     [currentValueLabel setTypeKind:22];
 
     UIImage *minusImage = [%c(QTMIcon) imageWithName:@"ic_remove" color:nil];
+    UIImage *plusImage = [%c(QTMIcon) imageWithName:@"ic_add" color:nil];
+    BOOL legacy = minusImage == nil;
+    if (legacy) {
+        minusImage = [%c(QTMIcon) imageWithName:@"ic_remove_circle" color:nil];
+        plusImage = [[%c(QTMIcon) imageWithName:@"ic_add_circle" color:nil] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
     YTQTMButton *minusButton = [%c(YTQTMButton) buttonWithImage:minusImage accessibilityLabel:@"Decrease playback speed" accessibilityIdentifier:@"playback.speed.minus"];
-    minusButton.flatButtonHasOpaqueBackground = YES;
+    minusButton.flatButtonHasOpaqueBackground = !legacy;
     minusButton.sizeWithPaddingAndInsets = YES;
     minusButton.tag = 'mbtn';
     [minusButton yt_setSize:adjustButtonSize];
     [minusButton addTarget:delegate action:@selector(didPressMinusButton:) forControlEvents:UIControlEventTouchUpInside];
 
-    UIImage *plusImage = [%c(QTMIcon) imageWithName:@"ic_add" color:nil];
     YTQTMButton *plusButton = [%c(YTQTMButton) buttonWithImage:plusImage accessibilityLabel:@"Increase playback speed" accessibilityIdentifier:@"playback.speed.plus"];
-    plusButton.flatButtonHasOpaqueBackground = YES;
+    plusButton.flatButtonHasOpaqueBackground = !legacy;
     plusButton.sizeWithPaddingAndInsets = YES;
     plusButton.tag = 'pbtn';
     [plusButton yt_setSize:adjustButtonSize];
