@@ -1,5 +1,5 @@
-#import <../YTVideoOverlay/Header.h>
-#import <../YTVideoOverlay/Init.x>
+#import <YTVideoOverlay/Header.h>
+#import <YTVideoOverlay/Init.x>
 #import <YouTubeHeader/MDCSlider.h>
 // #import <YouTubeHeader/MLAVPlayer.h>
 #import <YouTubeHeader/MLHAMPlayerItemSegment.h>
